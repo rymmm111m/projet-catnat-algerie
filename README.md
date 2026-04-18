@@ -1,35 +1,36 @@
-# projet-catnat-algerie
-Outil d'analyse des risques CATNAT et zonage RPA 2024.
-# 🛡️ Outil d'Analyse CATNAT & Zonage RPA 2024 (Algérie)
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-### 📋 Présentation du Projet
-Cette application interactive est un **Dashboard de Gestion des Risques** conçu pour les compagnies d'assurance opérant en Algérie. Elle permet de croiser les données réelles du portefeuille (Assurances Catastrophes Naturelles - CATNAT) avec les nouvelles réglementations sismiques du **RPA 2024**.
+## Getting Started
 
-L'objectif principal est d'offrir une aide à la décision pour identifier les zones de **surconcentration de capitaux** et optimiser la stratégie de souscription.
+First, run the development server:
 
----
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-### 🚀 Fonctionnalités Clés
-* **Carte Interactive (Folium) :** Visualisation dynamique des Wilayas et Communes. La coloration respecte le zonage sismique officiel (Zone 1 à 3).
-* **Analyse de Portefeuille (KPIs) :** Calcul en temps réel du Capital Total Exposé, du cumul des Primes Nettes et du Ratio de Risque moyen.
-* **Zonage RPA & Nature du Risque :** Graphiques d'analyse de la répartition des capitaux par zone sismique et par type de bâtiment (Industriel, Commercial, Habitation).
-* **Détection des Points Chauds :** Identification automatique du Top 5 des zones (Wilayas/Communes) présentant les plus fortes concentrations de risques.
-* **Interactivité Totale :** Cliquez sur une wilaya pour filtrer instantanément l'ensemble du dashboard.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
----
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-### 🛠️ Technologies Utilisées
-* **Langage :** Python 3.12+
-* **Framework Web :** [Streamlit](https://streamlit.io/)
-* **Cartographie :** [Folium](https://python-visualization.github.io/folium/)
-* **Analyse de données :** Pandas
-* **Données Géo :** GeoJSON (Découpage administratif algérien)
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
----
+## Learn More
 
-### 💻 Installation et Utilisation Locale
+To learn more about Next.js, take a look at the following resources:
 
-1. **Cloner le projet**
-   ```bash
-   git clone [https://github.com/TON_NOM_UTILISATEUR/TON_NOM_DE_REPO.git](https://github.com/TON_NOM_UTILISATEUR/TON_NOM_DE_REPO.git)
-   cd TON_NOM_DE_REPO
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
