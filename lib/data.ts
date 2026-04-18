@@ -1,3 +1,135 @@
+// Communes for each wilaya (sample data - top communes by population)
+export const WILAYA_COMMUNES: Record<string, string[]> = {
+  "ADRAR": ["Adrar", "Reggane", "Timimoun", "Aoulef", "Tsabit", "Fenoughil"],
+  "CHLEF": ["Chlef", "Tenes", "El Karimia", "Oued Fodda", "Boukadir", "Abou El Hassan", "Beni Haoua", "Ouled Fares", "Ain Merane", "Chlef Centre"],
+  "LAGHOUAT": ["Laghouat", "Aflou", "Ksar El Hirane", "Hassi R'Mel", "Ain Mahdi"],
+  "OUM EL BOUAGHI": ["Oum El Bouaghi", "Ain Beida", "Ain M'lila", "Ksar Sbahi", "Meskiana"],
+  "BATNA": ["Batna", "Barika", "Ain Touta", "N'Gaous", "Merouana", "Arris", "Tazoult", "El Madher"],
+  "BEJAIA": ["Bejaia", "Akbou", "El Kseur", "Sidi Aich", "Tichy", "Aokas", "Kherrata", "Amizour", "Souk El Tenine"],
+  "BISKRA": ["Biskra", "Tolga", "Ouled Djellal", "Sidi Okba", "El Kantara", "M'Chounech"],
+  "BECHAR": ["Bechar", "Kenadsa", "Abadla", "Beni Ounif", "Taghit"],
+  "BLIDA": ["Blida", "Boufarik", "El Affroun", "Mouzaia", "Ouled Yaich", "Beni Mered", "Guerrouaou", "Chrea", "Bouarfa", "Chiffa"],
+  "BOUIRA": ["Bouira", "Lakhdaria", "Sour El Ghozlane", "M'Chedallah", "Ain Bessem", "Kadiria", "Haizer", "Bechloul"],
+  "TAMANRASSET": ["Tamanrasset", "In Salah", "In Guezzam", "Ideles", "Tazrouk"],
+  "TEBESSA": ["Tebessa", "Bir El Ater", "Cheria", "El Aouinet", "Ouenza", "Morsott"],
+  "TLEMCEN": ["Tlemcen", "Maghnia", "Ghazaouet", "Remchi", "Nedroma", "Sebdou", "Honaine"],
+  "TIARET": ["Tiaret", "Frenda", "Sougueur", "Ksar Chellala", "Mahdia", "Mechraa Sfa"],
+  "TIZI OUZOU": ["Tizi Ouzou", "Azazga", "Draa El Mizan", "Ain El Hammam", "Tigzirt", "Larbaa Nath Irathen", "Ouaguenoun", "Beni Douala", "Makouda"],
+  "ALGER": ["Alger Centre", "Bab El Oued", "Hussein Dey", "El Harrach", "Bir Mourad Rais", "Bouzareah", "Kouba", "Rouiba", "Reghaia", "Dar El Beida", "Bordj El Kiffan", "Dely Ibrahim", "Hydra", "El Biar", "Cheraga", "Draria", "Ain Benian"],
+  "DJELFA": ["Djelfa", "Messaad", "Ain Oussera", "Hassi Bahbah", "Charef", "Birine"],
+  "JIJEL": ["Jijel", "El Milia", "Taher", "Chekfa", "El Aouana", "Ziama Mansouriah", "Settara"],
+  "SETIF": ["Setif", "El Eulma", "Ain Oulmene", "Ain Arnat", "Bougaa", "Ain Azel", "Salah Bey"],
+  "SAIDA": ["Saida", "Ain El Hadjar", "Youb", "El Hassasna", "Ouled Khaled"],
+  "SKIKDA": ["Skikda", "Azzaba", "Collo", "El Harrouch", "Tamalous", "Ramdane Djamel"],
+  "SIDI BEL ABBES": ["Sidi Bel Abbes", "Telagh", "Ben Badis", "Sfisef", "Ain El Berd"],
+  "ANNABA": ["Annaba", "El Bouni", "El Hadjar", "Sidi Amar", "Berrahal", "Seraidi"],
+  "GUELMA": ["Guelma", "Oued Zenati", "Bouchegouf", "Heliopolis", "Hammam Debagh"],
+  "CONSTANTINE": ["Constantine", "El Khroub", "Ain Smara", "Hamma Bouziane", "Didouche Mourad", "Zighoud Youcef"],
+  "MEDEA": ["Medea", "Berrouaghia", "Ksar El Boukhari", "Tablat", "Beni Slimane", "Ain Boucif", "Ouamri"],
+  "MOSTAGANEM": ["Mostaganem", "Ain Tedeles", "Sidi Ali", "Achaacha", "Hassi Mameche", "Mazagran"],
+  "MSILA": ["M'sila", "Bou Saada", "Sidi Aissa", "Ain El Hadjel", "Hammam Dalaa"],
+  "MASCARA": ["Mascara", "Sig", "Mohammadia", "Tighennif", "Hachem", "Bouhanifia"],
+  "OUARGLA": ["Ouargla", "Hassi Messaoud", "Touggourt", "Taibet", "El Hadjira"],
+  "ORAN": ["Oran", "Bir El Djir", "Es Senia", "Ain Turk", "Arzew", "Bethioua", "Gdyel", "Hassi Bounif", "El Karma"],
+  "EL BAYADH": ["El Bayadh", "Bougtob", "Brezina", "Labiodh Sidi Cheikh"],
+  "ILLIZI": ["Illizi", "Djanet", "In Amenas", "Bordj Omar Driss"],
+  "BORDJ BOU ARRERIDJ": ["Bordj Bou Arreridj", "Ras El Oued", "El Achir", "Bir Kasdali", "Mansourah"],
+  "BOUMERDES": ["Boumerdes", "Thenia", "Bordj Menaiel", "Dellys", "Khemis El Khechna", "Boudouaou", "Naciria", "Ouled Moussa", "Hammadi", "Si Mustapha"],
+  "EL TARF": ["El Tarf", "El Kala", "Bouteldja", "Ben M'Hidi", "Besbes"],
+  "TINDOUF": ["Tindouf", "Oum El Assel"],
+  "TISSEMSILT": ["Tissemsilt", "Theniet El Had", "Bordj Bounaama", "Khemisti", "Lardjem"],
+  "EL OUED": ["El Oued", "Bayadha", "Guemar", "Debila", "Robbah", "Hassani Abdelkrim"],
+  "KHENCHELA": ["Khenchela", "Kais", "Babar", "Chechar", "El Hamma"],
+  "SOUK AHRAS": ["Souk Ahras", "Sedrata", "M'Daourouch", "Taoura", "Hanancha"],
+  "TIPAZA": ["Tipaza", "Kolea", "Hadjout", "Cherchell", "Bou Ismail", "Fouka", "Damous", "Gouraya", "Ain Tagourait"],
+  "MILA": ["Mila", "Ferdjioua", "Chelghoum Laid", "Oued Athmania", "Grarem Gouga", "Telerghma"],
+  "AIN DEFLA": ["Ain Defla", "Miliana", "Khemis Miliana", "El Attaf", "Djelida", "Boumedfaa", "Hammam Righa"],
+  "NAAMA": ["Naama", "Mecheria", "Ain Sefra", "El Biod"],
+  "AIN TEMOUCHENT": ["Ain Temouchent", "El Amria", "Beni Saf", "Hammam Bou Hadjar", "El Malah"],
+  "GHARDAIA": ["Ghardaia", "Metlili", "El Meniaa", "Berriane", "Guerrara"],
+  "RELIZANE": ["Relizane", "Oued Rhiou", "Mazouna", "Zemmoura", "Yellel"],
+  "TIMIMOUN": ["Timimoun", "Charouine", "Ouled Said", "Talmine"],
+  "BORDJ BADJI MOKHTAR": ["Bordj Badji Mokhtar", "Timiaouine"],
+  "OULED DJELLAL": ["Ouled Djellal", "Sidi Khaled", "Doucen"],
+  "BENI ABBES": ["Beni Abbes", "El Ouata", "Igli", "Tamtert"],
+  "IN SALAH": ["In Salah", "In Ghar", "Foggaret Ezzoua"],
+  "IN GUEZZAM": ["In Guezzam", "Tin Zaouatine"],
+  "TOUGGOURT": ["Touggourt", "Megarine", "Temacine", "El Hadjira"],
+  "DJANET": ["Djanet", "Bordj El Haouas"],
+  "EL MEGHAIER": ["El Meghaier", "Djamaa", "M'Rara", "Oum Touyour"],
+  "EL MENIAA": ["El Meniaa", "Hassi Gara"],
+};
+
+// Commune concentration data (sample for demonstration)
+export const COMMUNE_CONCENTRATION: Record<string, { name: string; exposure: number; policies: number; riskLevel: "high" | "medium" | "low" }[]> = {
+  "ALGER": [
+    { name: "Alger Centre", exposure: 15000000000, policies: 4200, riskLevel: "high" },
+    { name: "El Harrach", exposure: 12000000000, policies: 3500, riskLevel: "high" },
+    { name: "Bab El Oued", exposure: 8500000000, policies: 2800, riskLevel: "high" },
+    { name: "Hussein Dey", exposure: 7200000000, policies: 2100, riskLevel: "medium" },
+    { name: "Kouba", exposure: 6800000000, policies: 1950, riskLevel: "medium" },
+    { name: "Bordj El Kiffan", exposure: 5500000000, policies: 1600, riskLevel: "medium" },
+  ],
+  "BOUMERDES": [
+    { name: "Boumerdes", exposure: 9500000000, policies: 2800, riskLevel: "high" },
+    { name: "Boudouaou", exposure: 7200000000, policies: 2100, riskLevel: "high" },
+    { name: "Thenia", exposure: 5800000000, policies: 1700, riskLevel: "high" },
+    { name: "Khemis El Khechna", exposure: 4500000000, policies: 1300, riskLevel: "medium" },
+    { name: "Bordj Menaiel", exposure: 3200000000, policies: 950, riskLevel: "medium" },
+  ],
+  "BLIDA": [
+    { name: "Blida", exposure: 8500000000, policies: 2500, riskLevel: "high" },
+    { name: "Boufarik", exposure: 6200000000, policies: 1800, riskLevel: "high" },
+    { name: "El Affroun", exposure: 4100000000, policies: 1200, riskLevel: "medium" },
+    { name: "Mouzaia", exposure: 3500000000, policies: 1000, riskLevel: "medium" },
+  ],
+  "ORAN": [
+    { name: "Oran", exposure: 11000000000, policies: 3200, riskLevel: "high" },
+    { name: "Bir El Djir", exposure: 7500000000, policies: 2200, riskLevel: "high" },
+    { name: "Es Senia", exposure: 5200000000, policies: 1500, riskLevel: "medium" },
+    { name: "Arzew", exposure: 4800000000, policies: 1400, riskLevel: "medium" },
+  ],
+  "CONSTANTINE": [
+    { name: "Constantine", exposure: 9200000000, policies: 2700, riskLevel: "high" },
+    { name: "El Khroub", exposure: 6100000000, policies: 1800, riskLevel: "medium" },
+    { name: "Hamma Bouziane", exposure: 3800000000, policies: 1100, riskLevel: "medium" },
+  ],
+  "SETIF": [
+    { name: "Setif", exposure: 7800000000, policies: 2300, riskLevel: "medium" },
+    { name: "El Eulma", exposure: 5100000000, policies: 1500, riskLevel: "medium" },
+    { name: "Ain Oulmene", exposure: 3200000000, policies: 950, riskLevel: "low" },
+  ],
+  "TIPAZA": [
+    { name: "Kolea", exposure: 6500000000, policies: 1900, riskLevel: "high" },
+    { name: "Cherchell", exposure: 5200000000, policies: 1500, riskLevel: "high" },
+    { name: "Tipaza", exposure: 4800000000, policies: 1400, riskLevel: "high" },
+    { name: "Hadjout", exposure: 3900000000, policies: 1150, riskLevel: "medium" },
+  ],
+  "CHLEF": [
+    { name: "Chlef", exposure: 7200000000, policies: 2100, riskLevel: "high" },
+    { name: "Tenes", exposure: 4800000000, policies: 1400, riskLevel: "high" },
+    { name: "Boukadir", exposure: 3500000000, policies: 1000, riskLevel: "medium" },
+  ],
+  "AIN DEFLA": [
+    { name: "Ain Defla", exposure: 5500000000, policies: 1600, riskLevel: "high" },
+    { name: "Khemis Miliana", exposure: 4200000000, policies: 1200, riskLevel: "high" },
+    { name: "Miliana", exposure: 3800000000, policies: 1100, riskLevel: "medium" },
+  ],
+};
+
+// Get communes for a wilaya with their concentration data
+export function getCommuneData(wilayaName: string) {
+  const communes = WILAYA_COMMUNES[wilayaName.toUpperCase()] || [];
+  const concentrationData = COMMUNE_CONCENTRATION[wilayaName.toUpperCase()] || [];
+  
+  return {
+    communes,
+    concentrationData,
+    topConcentration: concentrationData.filter(c => c.riskLevel === "high").slice(0, 3),
+    lowConcentration: concentrationData.filter(c => c.riskLevel === "low").slice(0, 3),
+  };
+}
+
 // Wilaya zone classifications based on RPA (Reglement Parasismique Algerien)
 export const ZONE_CLASSIFICATIONS = {
   ZONE_III: {

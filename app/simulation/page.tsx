@@ -141,7 +141,7 @@ export default function SimulationPage() {
                   type="range"
                   min="0"
                   max="0.2"
-                  step="0.01"
+                  step="0.001"
                   value={frequency}
                   onChange={(e) => setFrequency(Number(e.target.value))}
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[hsl(var(--primary))]"
@@ -151,11 +151,23 @@ export default function SimulationPage() {
                     }%, hsl(var(--muted)) ${(frequency / 0.2) * 100}%, hsl(var(--muted)) 100%)`,
                   }}
                 />
-                <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))]">
+                <div className="flex justify-between items-center text-xs text-[hsl(var(--muted-foreground))]">
                   <span>0%</span>
-                  <span className="font-semibold text-[hsl(var(--primary))]">
-                    {(frequency * 100).toFixed(0)}%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      step="0.1"
+                      value={(frequency * 100).toFixed(1)}
+                      onChange={(e) => {
+                        const val = Math.min(Math.max(Number(e.target.value) / 100, 0), 0.2);
+                        setFrequency(val);
+                      }}
+                      className="w-16 text-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1 text-sm font-semibold text-[hsl(var(--primary))] outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
+                    />
+                    <span className="font-semibold text-[hsl(var(--primary))]">%</span>
+                  </div>
                   <span>20%</span>
                 </div>
               </div>
