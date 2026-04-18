@@ -2,538 +2,435 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
+import plotly.graph_objects as go
+import plotly.express as px
+import numpy as np
 import json
 import os
-import numpy as np
-import matplotlib.pyplot as plt
+import unicodedata
 
-# ─────────────────────────────────────────────
-# CONFIGURATION
-# ─────────────────────────────────────────────
-st.set_page_config(
-    layout="wide",
-    page_title="Système Expert CATNAT Algérie",
-    page_icon="🛡️"
-)
+# ==========================================
+# 1. CONFIGURATION GÉNÉRALE
+# ==========================================
+st.set_page_config(layout="wide", page_title="Système Expert CATNAT", page_icon="🛡️")
 
-st.markdown("""
-<style>
-    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
-
-    /* ── Métriques : fond neutre + texte forcé visible ── */
-    div[data-testid="stMetric"] {
-        background: #f0f2f6;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-    }
-    div[data-testid="stMetric"] label {
-        color: #444444 !important;
-        font-size: 0.85rem !important;
-    }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #111111 !important;
-        font-size: 1.25rem !important;
-        font-weight: 700 !important;
-    }
-
-    /* ── Titres principaux ── */
-    h1 { font-size: 1.8rem !important; font-weight: 700 !important; }
-    h2 { font-size: 1.35rem !important; font-weight: 600 !important; color: #333; }
-    h3 { font-size: 1.15rem !important; font-weight: 600 !important; color: #444; }
-
-    .stAlert { border-radius: 8px; }
-    div[data-testid="stSidebarNav"] { display: none; }
-
-    .score-badge {
-        display: inline-block;
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-top: 0.5rem;
-    }
-    .score-high   { background: #fde8e8; color: #c0392b; }
-    .score-medium { background: #fef3cd; color: #856404; }
-    .score-low    { background: #d4edda; color: #155724; }
-</style>
-""", unsafe_allow_html=True)
-
-# Couleurs carte selon zone RPA (Regroupées en 3 couleurs)
 RPA_COLORS = {
-    "III":  "#e31a1c",  # Rouge (Zone III)
-    "IIb":  "#ff7f00",  # Orange (Zone IIb)
-    "IIa":  "#ff7f00",  # Orange (Zone IIa)
-    "I":    "#33a02c",  # Vert (Zone I)
-    "0":    "#33a02c",  # Vert (Zone 0)
+    "ROUGE": "#e31a1c",
+    "ORANGE": "#ff7f00",
+    "VERT": "#33a02c"
 }
-# ─────────────────────────────────────────────
-# CHARGEMENT DES DONNÉES
-# ─────────────────────────────────────────────
+
+# ==========================================
+# 2. CHARGEMENT CENTRALISÉ DES DONNÉES
+# ==========================================
+@st.cache_data
+# Fonction magique pour nettoyer les accents et les tirets
+def clean_name(text):
+    if not isinstance(text, str) or text == "nan": return ""
+    # Enlève les accents
+    text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8')
+    # Remplace les tirets par des espaces et met tout en majuscules
+    return text.replace('-', ' ').strip().upper()
+
 @st.cache_data
 def load_data():
     df = pd.read_csv('FUSION_TOTALE_CATNAT.csv', low_memory=False)
-
-    df['CAPITAL_ASSURE'] = pd.to_numeric(df['CAPITAL_ASSURE'], errors='coerce').fillna(0)
-    df['PRIME_NETTE'] = pd.to_numeric(
-        df['PRIME_NETTE'].astype(str).str.replace(',', '.'), errors='coerce'
-    ).fillna(0)
-    df['COEFF_A'] = pd.to_numeric(df['COEFF_A'], errors='coerce').fillna(0)
-
-    df['RATIO_RISQUE'] = (df['PRIME_NETTE'] / (df['CAPITAL_ASSURE'] + 1)) * 1000
-    df['WILAYA_UP']    = df['WILAYA'].str.strip().str.upper()
-    df['COMMUNE_UP']   = df['COMMUNE'].str.split('-').str[-1].str.strip().str.upper()
-    df['TYPE_CLEAN']   = df['TYPE'].astype(str).str.split('-').str[-1].str.strip()
-
-    # Nettoyage de la colonne ZONE_RPA
-    df['ZONE_RPA'] = df['ZONE_RPA'].astype(str).str.strip()
-
-    # Regroupement en 3 catégories
-    def zone_label(z):
-        mapping = {
-            "III":  "Zone 3 — Risque élevé",
-            "IIb":  "Zone 2 — Risque moyen",
-            "IIa":  "Zone 2 — Risque moyen",
-            "I":    "Zone 1/0 — Risque faible",
-            "0":    "Zone 1/0 — Risque faible",
-        }
-        return mapping.get(z, f"Zone {z}")
-
-    # Application de la fonction
-    df['ZONE_LABEL'] = df['ZONE_RPA'].apply(zone_label)
     
+    df['CAPITAL_ASSURE'] = pd.to_numeric(df['CAPITAL_ASSURE'], errors='coerce').fillna(0)
+    df['PRIME_NETTE'] = df['PRIME_NETTE'].astype(str).str.replace('"', '').str.replace(',', '.')
+    df['PRIME_NETTE'] = pd.to_numeric(df['PRIME_NETTE'], errors='coerce').fillna(0)
+    df['RATIO_RISQUE'] = (df['PRIME_NETTE'] / (df['CAPITAL_ASSURE'] + 1)) * 1000
+    
+    if 'Source_Annee' in df.columns:
+        df['Source_Annee'] = pd.to_numeric(df['Source_Annee'], errors='coerce')
+    
+    # On applique notre nettoyeur intelligent ici !
+    df['WILAYA_UP'] = df['WILAYA'].apply(clean_name)
+    df['COMMUNE_UP'] = df['COMMUNE'].apply(clean_name)
+    df['TYPE_CLEAN'] = df['TYPE'].astype(str).str.split('-').str[-1].str.strip()
+    
+    def map_zone_colors(z):
+        z_str = str(z).strip()
+        if z_str == 'III': return "ZONE III (Rouge)"
+        elif z_str in ['IIa', 'IIb']: return "ZONE II (Orange)"
+        else: return "ZONE 0/I (Vert)"
+            
+    df['ZONE_RPA_CAT'] = df['ZONE_RPA'].apply(map_zone_colors)
     return df
 
 @st.cache_data
 def load_geojson(level):
     filename = f"dza_admin{level}.geojson"
-    if not os.path.exists(filename):
-        st.error(f"Fichier GeoJSON manquant : {filename}")
-        return None
+    if not os.path.exists(filename): return None
     with open(filename, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-
-def get_rpa_color_from_wilaya(wilaya_name, df):
-    """Détermine la couleur carte à partir du ZONE_RPA du dataset."""
-    rows = df[df['WILAYA_UP'] == str(wilaya_name).upper()]
-    if rows.empty:
-        return RPA_COLORS.get("I", "#33a02c")
-    zone = rows['ZONE_RPA'].mode()[0]
-    return RPA_COLORS.get(zone, "#33a02c")
-
-
 df = load_data()
-geo_wilayas  = load_geojson(1)
+geo_wilayas = load_geojson(1)
 geo_communes = load_geojson(2)
 
-# Table wilaya → zone RPA (mode) pour la carte
-wilaya_zone_map = (
-    df.groupby('WILAYA_UP')['ZONE_RPA']
-      .agg(lambda x: x.mode()[0])
-      .to_dict()
-)
+if 'selected_wilaya' not in st.session_state:
+    st.session_state.selected_wilaya = "Toutes les Wilayas"
 
-def get_rpa_color(name):
-    zone = wilaya_zone_map.get(str(name).upper(), "I")
-    return RPA_COLORS.get(zone, "#33a02c")
+# ==========================================
+# 3. MENU DE NAVIGATION & LOGO
+# ==========================================
+# Ajout du Logo tout en haut de la barre latérale
+try:
+    # Après (taille contrôlée)
+   st.sidebar.image("logo.png", width=150)
+except Exception:
+    st.sidebar.warning("Logo introuvable. Placez 'logo.png' dans le dossier.")
 
-
-# ─────────────────────────────────────────────
-# NAVIGATION
-# ─────────────────────────────────────────────
-st.sidebar.title("Système Expert CATNAT")
-st.sidebar.caption("Algérie — RPA 2024")
-st.sidebar.divider()
-
+st.sidebar.title("Menu Principal")
 page = st.sidebar.radio(
-    "Navigation",
-    ["Carte & Analyse territoriale", "Scoring de risque client", "Simulation séisme"],
-    label_visibility="collapsed"
+    "Choisissez un module d'analyse :",
+    [
+        "Cartographie du Portefeuille", 
+        "Souscription de Contrat", 
+        "Simulation Monte Carlo"
+    ]
 )
+st.sidebar.markdown("---")
+st.sidebar.caption("Système d'évaluation de l'exposition au risque sismique - RPA 2024")
 
 
-# ═════════════════════════════════════════════
-# PAGE 1 — CARTE & DASHBOARD
-# ═════════════════════════════════════════════
-if page == "Carte & Analyse territoriale":
-    st.title("Analyse territoriale — Zonage RPA 2024")
+# ==========================================
+# 4. PAGE 1 : CARTOGRAPHIE DU PORTEFEUILLE
+# ==========================================
+if page == "Cartographie du Portefeuille":
+    def get_rpa_color(name):
+        w = str(name).upper()
+        if w in ["ALGER", "BOUMERDES", "BLIDA", "TIPAZA", "CHLEF", "AIN DEFLA"]: return RPA_COLORS["ROUGE"]
+        elif w in ["ORAN", "CONSTANTINE", "SETIF", "BEJAIA", "TIZI OUZOU", "JIJEL", "SKIKDA", "ANNABA", "MEDEA"]: return RPA_COLORS["ORANGE"]
+        return RPA_COLORS["VERT"]
 
-    if 'selected_wilaya' not in st.session_state:
-        st.session_state.selected_wilaya = None
-
-    if st.session_state.selected_wilaya:
-        if st.sidebar.button("Retour — Algérie entière"):
-            st.session_state.selected_wilaya = None
-            st.rerun()
-        st.caption(f"Wilaya sélectionnée : **{st.session_state.selected_wilaya}**")
-
-# Légende RPA (3 Niveaux)
-    col_leg1, col_leg2, col_leg3, _ = st.columns([1, 1, 1, 3])
-    col_leg1.markdown("🔴 **Zone III** — Élevée")
-    col_leg2.markdown("🟠 **Zone II (a/b)** — Moyenne")
-    col_leg3.markdown("🟢 **Zone I/0** — Faible/Négligeable")
-
-    # Carte Folium
-    if st.session_state.selected_wilaya:
-        center, zoom = [36.0, 3.5], 8
-        display_data = {
-            "type": "FeatureCollection",
-            "features": [
-                f for f in geo_communes['features']
-                if f['properties'].get('adm1_name', '').upper() == st.session_state.selected_wilaya
-            ]
-        }
-        tooltip_fields  = ['adm1_name', 'adm2_name']
-        tooltip_aliases = ['Wilaya :', 'Commune :']
-    else:
-        center, zoom    = [28.0, 2.0], 5
-        display_data    = geo_wilayas
-        tooltip_fields  = ['adm1_name']
-        tooltip_aliases = ['Wilaya :']
-
-    m = folium.Map(location=center, zoom_start=zoom, tiles="cartodbpositron")
-    folium.GeoJson(
-        display_data,
-        style_function=lambda x: {
-            'fillColor': get_rpa_color(x['properties'].get('adm1_name', '')),
-            'color': 'white',
-            'weight': 1,
-            'fillOpacity': 0.7
-        },
-        tooltip=folium.GeoJsonTooltip(fields=tooltip_fields, aliases=tooltip_aliases)
-    ).add_to(m)
-
-    map_res = st_folium(m, width="100%", height=550, key="map_algeria")
-
-    if map_res.get("last_active_drawing") and not st.session_state.selected_wilaya:
-        clicked_w = map_res["last_active_drawing"]["properties"].get("adm1_name", "").upper()
-        if clicked_w:
-            st.session_state.selected_wilaya = clicked_w
-            st.rerun()
-
-    # ── Dashboard analytique ──
-    st.divider()
-
-    if st.session_state.selected_wilaya:
-        dashboard_df = df[df['WILAYA_UP'] == st.session_state.selected_wilaya]
-        st.subheader(f"Portefeuille — {st.session_state.selected_wilaya}")
-    else:
-        dashboard_df = df
-        st.subheader("Portefeuille — Algérie entière")
-
-    if dashboard_df.empty:
-        st.warning("Aucune donnée disponible pour cette sélection.")
-        st.stop()
-
-    # KPIs
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Capital total exposé (DZD)", f"{dashboard_df['CAPITAL_ASSURE'].sum():,.0f}")
-    c2.metric("Primes nettes totales (DZD)", f"{dashboard_df['PRIME_NETTE'].sum():,.0f}")
-    c3.metric("Ratio de risque moyen", f"{dashboard_df['RATIO_RISQUE'].mean():.4f}")
-
-    st.markdown("---")
-
-    col_g1, col_g2 = st.columns(2)
-    with col_g1:
-        st.subheader("Exposition par zone RPA")
-        zone_data = dashboard_df.groupby('ZONE_LABEL')['CAPITAL_ASSURE'].sum()
-        st.bar_chart(zone_data)
-
-    with col_g2:
-        st.subheader("Exposition par nature du risque")
-        type_data = dashboard_df.groupby('TYPE_CLEAN')['CAPITAL_ASSURE'].sum()
-        st.bar_chart(type_data)
-
-    st.markdown("---")
-
-    st.subheader("Surconcentrations — Top 5 (capital le plus élevé)")
-    col_t1, col_t2 = st.columns(2)
-    with col_t1:
-        st.caption("Par wilaya")
-        top_w = df.groupby('WILAYA_UP')['CAPITAL_ASSURE'].sum().sort_values(ascending=False).head(5)
-        st.bar_chart(top_w)
-    with col_t2:
-        st.caption("Par commune")
-        top_c = dashboard_df.groupby('COMMUNE_UP')['CAPITAL_ASSURE'].sum().sort_values(ascending=False).head(5)
-        st.dataframe(top_c.reset_index(), use_container_width=True)
-
-    st.markdown("---")
-
-    st.subheader("Sous-concentrations — Top 5 (déserts commerciaux)")
-    col_f1, col_f2 = st.columns(2)
-    df_active        = df[df['CAPITAL_ASSURE'] > 0]
-    dashboard_active = dashboard_df[dashboard_df['CAPITAL_ASSURE'] > 0]
-
-    with col_f1:
-        st.caption("Par wilaya")
-        flop_w = df_active.groupby('WILAYA_UP')['CAPITAL_ASSURE'].sum().sort_values(ascending=True).head(5)
-        st.bar_chart(flop_w)
-    with col_f2:
-        st.caption("Par commune")
-        flop_c = dashboard_active.groupby('COMMUNE_UP')['CAPITAL_ASSURE'].sum().sort_values(ascending=True).head(5)
-        st.dataframe(flop_c.reset_index(), use_container_width=True)
-
-
-# ═════════════════════════════════════════════
-# PAGE 2 — SCORING CLIENT
-# ═════════════════════════════════════════════
-elif page == "Scoring de risque client":
-    st.title("Scoring de risque client")
-    st.caption("Évaluation automatique de l'acceptabilité d'un dossier — moteur XGBoost (à intégrer)")
-    st.divider()
-
-    col_form, col_result = st.columns([1.4, 1])
-
-    with col_form:
-        st.subheader("Données du client")
-
-        wilaya_options = sorted(df['WILAYA_UP'].dropna().unique())
-        type_options   = sorted(df['TYPE_CLEAN'].dropna().unique())
-
-        wilaya_sel = st.selectbox("Wilaya", wilaya_options)
-
-        # Zone RPA et coeff_A dérivés automatiquement du dataset
-        rows_w = df[df['WILAYA_UP'] == wilaya_sel]
-        zone_rpa_val = rows_w['ZONE_RPA'].mode()[0]  if not rows_w.empty else "I"
-        coeff_a_val  = rows_w['COEFF_A'].mode()[0]   if not rows_w.empty else 0.12
-
-        zone_labels_map = {
-            "III":  ("Zone III — Élevée",        "high"),
-            "IIb":  ("Zone IIb — Moyenne haute",  "high"),
-            "IIa":  ("Zone IIa — Moyenne",         "medium"),
-            "I":    ("Zone I — Faible",            "low"),
-            "0":    ("Zone 0 — Négligeable",       "low"),
-        }
-        zone_label, zone_level = zone_labels_map.get(zone_rpa_val, (f"Zone {zone_rpa_val}", "low"))
-
-        badge_colors = {
-            "high":   "#fde8e8;color:#c0392b",
-            "medium": "#fef3cd;color:#856404",
-            "low":    "#d4edda;color:#155724"
-        }
-        st.markdown(
-            f"Zone RPA détectée : "
-            f"<span style='background:{badge_colors[zone_level]};padding:2px 10px;border-radius:12px;"
-            f"font-size:0.85rem;font-weight:600'>{zone_label}</span> "
-            f"&nbsp;|&nbsp; Coefficient A : <strong>{coeff_a_val}</strong>",
-            unsafe_allow_html=True
-        )
-        st.markdown(" ")
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            type_sel   = st.selectbox("Type de bien", type_options)
-            capital_in = st.number_input("Capital assuré (DZD)", min_value=0, step=100_000, format="%d")
-            prime_in   = st.number_input("Prime nette (DZD)",    min_value=0, step=1_000,   format="%d")
-
-        with col_b:
-            nb_etages = st.number_input("Nombre d'étages ", min_value=0, max_value=50, value=1)
-            surface   = st.number_input("Surface m² ",       min_value=0, step=10)
-            st.caption("⚙️ Étages et surface sont recueillis pour information — ils n'influencent pas encore le score.")
-
-        st.markdown(" ")
-        submitted = st.button("Calculer le score de risque", type="primary", use_container_width=True)
-
-    with col_result:
-        st.subheader("Résultat de l'évaluation")
-
-        if not submitted:
-            st.info("Remplissez le formulaire, puis cliquez sur **Calculer le score de risque**.")
-            st.markdown("""
-            **Variables prises en compte par le modèle :**
-            - Zone sismique RPA (wilaya → ZONE_RPA)
-            - Coefficient A de la zone
-            - Type de bien
-            - Capital assuré
-            - Prime nette
-            """)
-        else:
-            if capital_in == 0:
-                st.warning("Veuillez saisir un capital assuré supérieur à 0.")
+    def get_bounds(features):
+        lats, lons = [], []
+        def extract_coords(c):
+            if isinstance(c[0], (int, float)):
+                lons.append(c[0]); lats.append(c[1])
             else:
-                # ── Placeholder XGBoost ──────────────────────────────────────
-                # TODO: features = [zone_rpa_val, coeff_a_val, type_sel, capital_in, prime_in]
-                #       score = model.predict_proba([features])[0][1]
-                rng  = np.random.default_rng(int(capital_in) % 9999)
-                base = {"high": 0.72, "medium": 0.45, "low": 0.22}[zone_level]
-                score = float(np.clip(base + rng.normal(0, 0.08), 0.05, 0.98))
-                # ─────────────────────────────────────────────────────────────
+                for item in c: extract_coords(item)
+        for f in features:
+            geom = f.get('geometry', {})
+            if geom: extract_coords(geom.get('coordinates', []))
+        if lats and lons: return [[min(lats), min(lons)], [max(lats), max(lons)]]
+        return None
 
-                score_pct = int(score * 100)
-                bar_color = "#e74c3c" if score > 0.6 else ("#f39c12" if score > 0.35 else "#27ae60")
+    st.title("Cartographie des Risques Sismiques (RPA 2024)")
+    
+    col_search, col_btn = st.columns([3, 1])
+    liste_wilayas = ["Toutes les Wilayas"] + sorted(df['WILAYA_UP'].dropna().unique().tolist())
+    index_actuel = liste_wilayas.index(st.session_state.selected_wilaya) if st.session_state.selected_wilaya in liste_wilayas else 0
 
-                st.markdown(f"""
-                <div style='margin-bottom:1rem'>
-                    <div style='display:flex;justify-content:space-between;margin-bottom:4px'>
-                        <span style='font-size:0.85rem;color:#666'>Probabilité de sinistre</span>
-                        <span style='font-weight:600;color:{bar_color}'>{score_pct}%</span>
-                    </div>
-                    <div style='background:#eee;border-radius:8px;height:14px;overflow:hidden'>
-                        <div style='width:{score_pct}%;background:{bar_color};height:100%;border-radius:8px'></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+    with col_search:
+        choix_recherche = st.selectbox("Rechercher ou sélectionner une Wilaya :", options=liste_wilayas, index=index_actuel)
 
-                if score > 0.6:
-                    decision, badge_cls, motif = "Refus recommandé", "score-high", \
-                        "Score de risque élevé. Zone sismique à forte exposition."
-                elif score > 0.35:
-                    decision, badge_cls, motif = "Acceptation avec surprime", "score-medium", \
-                        "Risque modéré. Application d'une surprime sismique conseillée."
-                else:
-                    decision, badge_cls, motif = "Acceptation standard", "score-low", \
-                        "Risque faible. Conditions standard applicables."
+    with col_btn:
+        st.write("")
+        st.write("")
+        if st.button("Réinitialiser la vue", use_container_width=True):
+            st.session_state.selected_wilaya = "Toutes les Wilayas"
+            st.rerun()
 
-                st.markdown(
-                    f"**Décision :** <span class='score-badge {badge_cls}'>{decision}</span>",
-                    unsafe_allow_html=True
-                )
-                st.markdown(f"*{motif}*")
-                st.divider()
+    if choix_recherche != st.session_state.selected_wilaya:
+        st.session_state.selected_wilaya = choix_recherche
+        st.rerun()
 
-                st.markdown("**Récapitulatif du dossier**")
-                recap = {
-                    "Wilaya":           wilaya_sel,
-                    "Zone RPA":         zone_label,
-                    "Coefficient A":    coeff_a_val,
-                    "Type de bien":     type_sel,
-                    "Capital (DZD)":    f"{capital_in:,}",
-                    "Prime nette (DZD)": f"{prime_in:,}",
-                    "Étages":           nb_etages,
-                    "Surface (m²)":     surface,
+    bounds_to_fit = None
+    display_data = None
+    tooltip_fields = []
+    tooltip_aliases = []
+    
+    # Construction de la carte avec sécurité anti-crash (Correction du Bug)
+    if st.session_state.selected_wilaya != "Toutes les Wilayas" and geo_communes:
+        features_wilaya = [f for f in geo_communes['features'] if clean_name(f['properties'].get('adm1_name', '')) == st.session_state.selected_wilaya]
+        
+        if features_wilaya: # Vérifie si la liste n'est pas vide avant de dessiner
+            display_data = {"type": "FeatureCollection", "features": features_wilaya}
+            tooltip_fields, tooltip_aliases = ['adm1_name', 'adm2_name'], ['Wilaya:', 'Commune:']
+            bounds_to_fit = get_bounds(features_wilaya)
+            m = folium.Map(tiles="cartodbpositron")
+        else:
+            st.warning("Les données géographiques des communes ne sont pas disponibles pour cette Wilaya. Affichage de la carte globale.")
+            # Fallback vers la carte nationale si erreur
+            if geo_wilayas:
+                display_data = geo_wilayas
+                tooltip_fields, tooltip_aliases = ['adm1_name'], ['Wilaya:']
+                m = folium.Map(location=[28.0, 2.0], zoom_start=5, tiles="cartodbpositron")
+
+    elif geo_wilayas:
+        display_data = geo_wilayas
+        tooltip_fields, tooltip_aliases = ['adm1_name'], ['Wilaya:']
+        m = folium.Map(location=[28.0, 2.0], zoom_start=5, tiles="cartodbpositron")
+    else:
+        st.error("Fichiers GeoJSON introuvables.")
+
+    if display_data:
+        def style_fn(feature):
+            w_name = feature['properties'].get('adm1_name', '').upper()
+            return {'fillColor': get_rpa_color(w_name), 'color': 'white', 'weight': 1, 'fillOpacity': 0.7}
+
+        folium.GeoJson(
+            display_data, 
+            style_function=style_fn, 
+            tooltip=folium.GeoJsonTooltip(fields=tooltip_fields, aliases=tooltip_aliases)
+        ).add_to(m)
+        
+        if bounds_to_fit: m.fit_bounds(bounds_to_fit)
+        
+        map_res = st_folium(m, width="100%", height=450, key="map_algeria")
+
+        if map_res.get("last_active_drawing") and st.session_state.selected_wilaya == "Toutes les Wilayas":
+            clicked_w = map_res["last_active_drawing"]["properties"].get("adm1_name", "").upper()
+            if clicked_w:
+                st.session_state.selected_wilaya = clicked_w
+                st.rerun()
+
+    st.divider()
+    
+    # --- DASHBOARD MIS À JOUR ---
+    is_national = (st.session_state.selected_wilaya == "Toutes les Wilayas")
+    dashboard_df = df if is_national else df[df['WILAYA_UP'] == st.session_state.selected_wilaya]
+    
+    st.header(f"Analyse du Portefeuille : {'Algérie Entière' if is_national else st.session_state.selected_wilaya}")
+
+    if not dashboard_df.empty:
+        # Métriques principales
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Capital Total Exposé (DZD)", f"{dashboard_df['CAPITAL_ASSURE'].sum():,.0f}".replace(',', ' '))
+        c2.metric("Total Primes Nettes (DZD)", f"{dashboard_df['PRIME_NETTE'].sum():,.0f}".replace(',', ' '))
+        c3.metric("Ratio de Risque Moyen", f"{dashboard_df['RATIO_RISQUE'].mean():.2f}")
+        
+        st.write("---")
+        
+        # 1. Exposition par Zone RPA (Graphique + Camembert)
+        st.subheader("Exposition par Zone RPA")
+        col_bar_zone, col_pie_zone = st.columns(2)
+        zone_data = dashboard_df.groupby('ZONE_RPA_CAT')['CAPITAL_ASSURE'].sum().reset_index()
+        
+        with col_bar_zone:
+            fig_bar_zone = px.bar(zone_data, x='ZONE_RPA_CAT', y='CAPITAL_ASSURE', text_auto='.2s', labels={'ZONE_RPA_CAT':'Zone RPA', 'CAPITAL_ASSURE':'Capital (DZD)'})
+            fig_bar_zone.update_traces(marker_color='#ff4b4b')
+            st.plotly_chart(fig_bar_zone, use_container_width=True)
+            
+        with col_pie_zone:
+            fig_pie_zone = px.pie(zone_data, names='ZONE_RPA_CAT', values='CAPITAL_ASSURE', hole=0.4)
+            st.plotly_chart(fig_pie_zone, use_container_width=True)
+            
+        st.write("---")
+        
+        # 2. Exposition par Nature du Risque (Graphique + Camembert)
+        st.subheader("Exposition par Nature du Risque")
+        col_bar_type, col_pie_type = st.columns(2)
+        type_data = dashboard_df.groupby('TYPE_CLEAN')['CAPITAL_ASSURE'].sum().reset_index()
+        
+        with col_bar_type:
+            fig_bar_type = px.bar(type_data, x='TYPE_CLEAN', y='CAPITAL_ASSURE', text_auto='.2s', labels={'TYPE_CLEAN':'Type de Bien', 'CAPITAL_ASSURE':'Capital (DZD)'})
+            fig_bar_type.update_traces(marker_color='#0068c9')
+            st.plotly_chart(fig_bar_type, use_container_width=True)
+            
+        with col_pie_type:
+            fig_pie_type = px.pie(type_data, names='TYPE_CLEAN', values='CAPITAL_ASSURE', hole=0.4)
+            st.plotly_chart(fig_pie_type, use_container_width=True)
+            
+        st.write("---")
+            
+        # 3. Points Chauds & Opportunités (Uniquement Diagrammes)
+        group_col = 'WILAYA_UP' if is_national else 'COMMUNE_UP'
+        grouped_geo = dashboard_df.groupby(group_col)['CAPITAL_ASSURE'].sum().reset_index()
+        grouped_geo_positive = grouped_geo[grouped_geo['CAPITAL_ASSURE'] > 0] # Filtrer pour ignorer les 0
+        
+        col_hot, col_cold = st.columns(2)
+        
+        with col_hot:
+            st.subheader("🔥 Points Chauds (Top 3 Sur-concentration)")
+            top3 = grouped_geo.sort_values(ascending=False, by='CAPITAL_ASSURE').head(3)
+            fig_hot = px.bar(top3, x=group_col, y='CAPITAL_ASSURE', text_auto='.2s', labels={group_col: 'Localisation', 'CAPITAL_ASSURE':'Capital (DZD)'})
+            fig_hot.update_traces(marker_color='#e31a1c')
+            st.plotly_chart(fig_hot, use_container_width=True)
+            
+        with col_cold:
+            st.subheader("💡 Opportunités (Top 3 Sous-concentration)")
+            bottom3 = grouped_geo_positive.sort_values(ascending=True, by='CAPITAL_ASSURE').head(3)
+            fig_cold = px.bar(bottom3, x=group_col, y='CAPITAL_ASSURE', text_auto='.2s', labels={group_col: 'Localisation', 'CAPITAL_ASSURE':'Capital (DZD)'})
+            fig_cold.update_traces(marker_color='#33a02c')
+            st.plotly_chart(fig_cold, use_container_width=True)
+
+
+# ==========================================
+# 5. PAGE 2 : SOUSCRIPTION DE CONTRAT
+# ==========================================
+elif page == "Souscription de Contrat":
+    
+    def determiner_zone_depuis_data(wilaya_nom):
+        try:
+            zone_detectee = df[df['WILAYA_UP'] == wilaya_nom]['ZONE_RPA'].mode()[0]
+            return zone_detectee
+        except:
+            return "IIa"
+
+    def evaluer_risque_avance(zone_rpa, type_bien, capital):
+        taux_base = {"0": 0.0001, "I": 0.0003, "IIa": 0.0007, "IIb": 0.0012, "III": 0.0020, "IV": 0.0030}
+        coeffs_type = {"Immobilier (Habitation)": 1.0, "Commercial (Bureaux/Magasins)": 1.4, "Industriel (Usines/Dépôts)": 2.2}
+        
+        base_rate = taux_base.get(zone_rpa, 0.0010)
+        mult_type = coeffs_type.get(type_bien, 1.0)
+        
+        score_zone = {"0": 10, "I": 25, "IIa": 45, "IIb": 65, "III": 85, "IV": 100}.get(zone_rpa, 50)
+        score_bien = {"Immobilier (Habitation)": 20, "Commercial (Bureaux/Magasins)": 50, "Industriel (Usines/Dépôts)": 90}.get(type_bien, 50)
+        
+        score_final = (score_zone * 0.6) + (score_bien * 0.4)
+        if capital > 1_000_000_000: score_final += 10
+            
+        return min(score_final, 100.0), capital * base_rate * mult_type
+
+    st.title("Module de Souscription Intelligent")
+    st.markdown("Détection automatique de l'aléa sismique et ajustement tarifaire selon l'activité.")
+
+    with st.container(border=True):
+        st.subheader("Informations du Prospect")
+        col_w, col_c = st.columns(2)
+        
+        wilayas_list = sorted(df['WILAYA_UP'].dropna().unique())
+        selected_wilaya = col_w.selectbox("Wilaya du projet", wilayas_list)
+        zone_auto = determiner_zone_depuis_data(selected_wilaya)
+        
+        communes_list = sorted(df[df['WILAYA_UP'] == selected_wilaya]['COMMUNE_UP'].dropna().unique())
+        selected_commune = col_c.selectbox("Commune", communes_list)
+
+        col_type, col_cap = st.columns(2)
+        type_bien = col_type.selectbox("Nature du Bien", ["Immobilier (Habitation)", "Commercial (Bureaux/Magasins)", "Industriel (Usines/Dépôts)"])
+        capital_assure = col_cap.number_input("Capital total à assurer (DZD)", min_value=0.0, value=50_000_000.0, step=10_000_000.0)
+
+    st.caption(f"Zone RPA détectée pour {selected_wilaya} : **Zone {zone_auto}**")
+
+    if st.button("Générer le Diagnostic de Souscription", type="primary", use_container_width=True):
+        score, prime = evaluer_risque_avance(zone_auto, type_bien, capital_assure)
+        st.divider()
+        
+        c1, c2 = st.columns([1, 1.2])
+        with c1:
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number", value = score, number = {'suffix': "%", 'font': {'size': 40}},
+                gauge = {
+                    'axis': {'range': [0, 100]},
+                    'bar': {'color': "#222"},
+                    'steps': [{'range': [0, 40], 'color': "#33a02c"}, {'range': [40, 75], 'color': "#ff7f00"}, {'range': [75, 100], 'color': "#e31a1c"}]
                 }
-                for k, v in recap.items():
-                    st.markdown(f"- **{k}** : {v}")
+            ))
+            fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20))
+            st.plotly_chart(fig, use_container_width=True)
 
-                st.caption("⚠ Score simulé — le modèle XGBoost sera branché ici.")
+        with c2:
+            st.subheader("Analyse Technique")
+            st.metric("Prime Nette Annuelle", f"{prime:,.2f} DZD".replace(',', ' '))
+            
+            if score < 40: st.success("🟢 **RISQUE ACCEPTABLE**\n\nProfil standard. Aucune mesure particulière requise.")
+            elif score < 75: st.warning("🟠 **SURVEILLANCE REQUISE**\n\nExposition modérée. Application d'une franchise recommandée.")
+            else: st.error("🔴 **RISQUE ÉLEVÉ**\n\nActivité vulnérable en zone sismique. Étude de vulnérabilité obligatoire.")
 
 
-# ═════════════════════════════════════════════
-# PAGE 3 — SIMULATION SÉISME (Monte Carlo)
-# ═════════════════════════════════════════════
-elif page == "Simulation séisme":
-    st.title("Simulation d'impact séismique")
-    st.caption("Modélisation probabiliste — Monte Carlo 100 000 itérations (Poisson × Lognormale)")
-    st.divider()
+# ==========================================
+# 6. PAGE 3 : SIMULATION MONTE CARLO
+# ==========================================
+elif page == "Simulation Monte Carlo":
+    st.title("Simulation Stochastique de Portefeuille (Monte Carlo)")
+    st.markdown("Évaluation probabiliste des pertes maximales selon des scénarios sismiques simulés.")
 
-    col_params, col_output = st.columns([1, 1.4])
-
-    with col_params:
-        st.subheader("Paramètres")
-
-        wilaya_sim = st.selectbox(
-            "Zone d'impact (wilaya)",
-            sorted(df['WILAYA_UP'].dropna().unique())
-        )
-
-        lambda_freq = st.slider(
-            "Fréquence annuelle de l'événement",
-            min_value=0.0, max_value=0.2, value=0.05, step=0.01,
-            format="%.2f",
-            help="Probabilité annuelle d'occurrence (ex. 0.05 = 1 événement tous les 20 ans)"
-        )
-
-        # Infos de la zone sélectionnée
-        df_w_info = df[df['WILAYA_UP'] == wilaya_sim]
-        zone_rpa_sim  = df_w_info['ZONE_RPA'].mode()[0] if not df_w_info.empty else "I"
-        coeff_a_sim   = df_w_info['COEFF_A'].mode()[0]  if not df_w_info.empty else 0.12
-        capital_zone  = df_w_info['CAPITAL_ASSURE'].sum()
-        total_primes  = df_w_info['PRIME_NETTE'].sum()
-
-        st.info(
-            f"**Zone RPA :** {zone_rpa_sim}  |  **Coeff. A :** {coeff_a_sim}\n\n"
-            f"**Capital exposé :** {capital_zone:,.0f} DZD\n\n"
-            f"**Primes encaissées :** {total_primes:,.0f} DZD"
-        )
-
-        run_sim = st.button("Lancer la simulation", type="primary", use_container_width=True)
-
-    with col_output:
-        st.subheader("Résultats financiers")
-
-        if not run_sim:
-            st.info("Sélectionnez une wilaya et une fréquence, puis lancez la simulation.")
-            st.markdown("""
-            **Ce que calcule le modèle :**
-            - Distribution des pertes (Poisson × Lognormale)
-            - Prime pure / Perte espérée annuelle (PEA)
-            - VaR 99,5 % — scénario 1-en-200 ans (standard Solvabilité II)
-            - Ratio S/P technique (Loss Ratio)
-            - Histogramme de la distribution des sinistres
-            """)
+    if 'Source_Annee' not in df.columns:
+        st.error("La colonne 'Source_Annee' est manquante dans les données.")
+    else:
+        df_2024 = df[df['Source_Annee'] == 2024].copy()
+        
+        if df_2024.empty:
+            st.warning("Aucune donnée trouvée pour l'année 2024 dans le dataset.")
         else:
-            with st.spinner("Simulation en cours — 100 000 itérations..."):
+            def get_severity(row):
+                t = str(row['TYPE_CLEAN']).lower()
+                if 'industrielle' in t: return 0.7 
+                if 'commercial' in t: return 0.5 
+                return 0.3
+            
+            df_2024['SEVERITY_FACTOR'] = df_2024.apply(get_severity, axis=1)
 
-                N_SIM    = 100_000
-                sigma    = 0.8
-                mean_mdr = 0.05
+            with st.container(border=True):
+                st.subheader("Paramétrage du Scénario")
+                col_param1, col_param2 = st.columns(2)
+                wilayas_disponibles = sorted(df_2024['WILAYA_UP'].unique())
+                
+                with col_param1:
+                    selected_mc_wilaya = st.selectbox("Cible de la simulation (Wilaya)", wilayas_disponibles)
+                with col_param2:
+                    lambda_freq = st.slider("Fréquence annuelle d'occurrence (CATNAT)", 0.0, 0.2, 0.05, step=0.01)
 
-                # Facteur de sévérité par type de bien
-                def severity_factor(t):
-                    t = str(t).lower()
-                    if 'industriel' in t: return 0.7
-                    if 'commercial' in t: return 0.5
-                    return 0.3
+            df_w = df_2024[df_2024['WILAYA_UP'] == selected_mc_wilaya].copy()
+            df_w['EXPOSITION_UNITAIRE'] = df_w['CAPITAL_ASSURE'] * df_w['SEVERITY_FACTOR'] * 0.30
+            
+            expo_totale_wilaya = df_w['EXPOSITION_UNITAIRE'].sum()
+            total_primes = df_w['PRIME_NETTE'].sum()
 
-                df_w = df[df['WILAYA_UP'] == wilaya_sim].copy()
-                df_w['SEV_FACTOR']       = df_w['TYPE_CLEAN'].apply(severity_factor)
-                df_w['EXPOSITION_UNIT']  = df_w['CAPITAL_ASSURE'] * df_w['SEV_FACTOR'] * 0.30
-                expo_totale = df_w['EXPOSITION_UNIT'].sum()
-
-                # ── Monte Carlo ──────────────────────────────────────────────
-                rng = np.random.default_rng(42)
-                losses = np.zeros(N_SIM)
-                n_events_per_year = rng.poisson(lambda_freq, N_SIM)
-
-                for i in range(N_SIM):
-                    n_ev = n_events_per_year[i]
-                    if n_ev > 0:
-                        year_loss = 0.0
-                        for _ in range(n_ev):
-                            mu_adj = np.log(mean_mdr) - 0.5 * sigma**2
-                            mdr    = min(rng.lognormal(mu_adj, sigma), 0.8)
-                            year_loss += expo_totale * mdr
-                        losses[i] = year_loss
-                # ─────────────────────────────────────────────────────────────
-
-            st.success("Simulation terminée — 100 000 scénarios annuels générés.")
-            st.divider()
-
-            pea    = losses.mean()
-            var995 = np.percentile(losses, 99.5)
-            var99  = np.percentile(losses, 99.0)
-            tvar   = losses[losses >= var99].mean()
-            lr     = (pea / total_primes * 100) if total_primes > 0 else 0.0
-
-            # ── KPIs ──────────────────────────────────────────────────────
-            m1, m2 = st.columns(2)
-            m1.metric("Perte espérée annuelle (PEA)", f"{pea:,.0f} DZD")
-            m2.metric("VaR 99,5 % — scénario 1/200 ans", f"{var995:,.0f} DZD")
-
-            m3, m4 = st.columns(2)
-            m3.metric("TVaR 99 % (queue de distribution)", f"{tvar:,.0f} DZD")
-            lr_color = "green" if lr < 50 else ("orange" if lr < 80 else "red")
-            m4.metric("Ratio S/P technique (Loss Ratio)", f"{lr:.2f} %")
+            st.markdown("### Profil du Portefeuille Ciblé (2024)")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Nombre de Polices Actives", len(df_w))
+            c2.metric("Exposition Modélisée (PML)", f"{expo_totale_wilaya:,.0f} DZD".replace(',', ' '))
+            c3.metric("Volume de Primes Nettes", f"{total_primes:,.0f} DZD".replace(',', ' '))
 
             st.divider()
 
-            # ── Histogramme ───────────────────────────────────────────────
-            st.subheader("Distribution des sinistres simulés")
-            pertes_pos = losses[losses > 0]
+            if expo_totale_wilaya > 0:
+                with st.spinner("Génération de 100,000 scénarios sismiques en cours..."):
+                    n_sim = 100000
+                    freq = lambda_freq
+                    sigma = 0.8
+                    mean_mdr = 0.05
+                    
+                    losses = np.zeros(n_sim)
+                    n_events_per_year = np.random.poisson(freq, n_sim)
+                    
+                    for i in range(n_sim):
+                        n_events = n_events_per_year[i]
+                        if n_events > 0:
+                            total_loss_year = 0
+                            for _ in range(n_events):
+                                mu_adj = np.log(mean_mdr) - 0.5 * (sigma**2)
+                                mdr_event = min(np.random.lognormal(mu_adj, sigma), 0.8)
+                                total_loss_year += expo_totale_wilaya * mdr_event
+                            losses[i] = total_loss_year
 
-            if len(pertes_pos) > 100:
-                fig, ax = plt.subplots(figsize=(7, 3.5))
-                ax.hist(pertes_pos, bins=50, color='royalblue', alpha=0.75, edgecolor='white')
-                ax.axvline(pea,    color='green',  linestyle='--', linewidth=1.5, label=f"PEA : {pea:,.0f}")
-                ax.axvline(var995, color='red',    linestyle='--', linewidth=1.5, label=f"VaR 99,5% : {var995:,.0f}")
-                ax.set_xlabel("Perte annuelle simulée (DZD)")
-                ax.set_ylabel("Fréquence")
-                ax.legend(fontsize=8)
-                ax.set_title(f"Wilaya : {wilaya_sim} — fréquence λ = {lambda_freq:.2f}")
-                fig.tight_layout()
-                st.pyplot(fig)
+                res1, res2 = st.columns([1, 1.5])
+                
+                with res1:
+                    st.subheader("Indicateurs de Solvabilité")
+                    st.write(f"**Charge moyenne annuelle :**\n{losses.mean():,.0f} DZD")
+                    
+                    pml_995 = np.percentile(losses, 99.5)
+                    st.error(f"**Value at Risk (VaR 99.5%) :**\n{pml_995:,.0f} DZD")
+                    st.caption("Perte maximale attendue avec une probabilité de 1-en-200 ans (Standard Solvabilité II).")
+                    
+                    lr = (losses.mean() / total_primes * 100) if total_primes > 0 else 0
+                    st.write("---")
+                    if lr < 50:
+                        st.success(f"**S/P Technique : {lr:.2f}%**\n(Rentable)")
+                    elif lr < 80:
+                        st.warning(f"**S/P Technique : {lr:.2f}%**\n(Sous tension)")
+                    else:
+                        st.error(f"**S/P Technique : {lr:.2f}%**\n(Déficitaire)")
+
+                with res2:
+                    st.subheader("Distribution des Pertes Modélisées")
+                    pertes_positives = losses[losses > 0]
+                    if len(pertes_positives) > 0:
+                        fig_hist = px.histogram(
+                            x=pertes_positives, 
+                            nbins=40,
+                            labels={'x': 'Montant des dommages (DZD)', 'y': "Nombre d'occurrences"},
+                            color_discrete_sequence=['#1f77b4']
+                        )
+                        fig_hist.update_layout(margin=dict(l=0, r=0, t=20, b=0), plot_bgcolor="rgba(0,0,0,0)")
+                        st.plotly_chart(fig_hist, use_container_width=True)
+                    else:
+                        st.info("La probabilité définie est trop faible pour générer des événements significatifs sur 100 000 itérations.")
             else:
-                st.info("Fréquence trop basse pour générer des sinistres significatifs. "
-                        "Essayez d'augmenter la fréquence annuelle.")
-
-            st.caption("⚠ Modèle Poisson × Lognormale — paramétrage à calibrer sur données historiques.")
+                st.warning("L'exposition est nulle pour cette Wilaya. Impossible de lancer la simulation.")
