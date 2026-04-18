@@ -92,7 +92,7 @@ page = st.sidebar.radio(
     ]
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("Système d'évaluation de l'exposition au risque sismique - RPA 2024")
+st.sidebar.caption("Système d'évaluation de l'exposition au risque sismique")
 
 
 # ==========================================
@@ -118,7 +118,7 @@ if page == "Cartographie du Portefeuille":
         if lats and lons: return [[min(lats), min(lons)], [max(lats), max(lons)]]
         return None
 
-    st.title("Cartographie des Risques Sismiques (RPA 2024)")
+    st.title("Cartographie des Risques Sismiques")
     
     col_search, col_btn = st.columns([3, 1])
     liste_wilayas = ["Toutes les Wilayas"] + sorted(df['WILAYA_UP'].dropna().unique().tolist())
